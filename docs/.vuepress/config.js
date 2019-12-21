@@ -1,7 +1,7 @@
 //  配置文件的入口文件
 module.exports = {
     title: '孙柯宝前端蜗牛🐌',
-    description: '孙柯宝博客之家',
+    description: '前端博客之家',
     configureWebpack: {
         resolve: {
           alias: {

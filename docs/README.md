@@ -12,5 +12,8 @@ actionLink: /JS/
 #   details: 享受 Vue + webpack 的开发体验，在 Markdown 中使用 Vue 组件，同时可以使用 Vue 来开发自定义主题。
 # - title: 深造自我
 #   details: VuePress 为每个页面预渲染生成静态的 HTML，同时在页面被加载的时候，将作为 SPA 运行。
-footer: Copyright © 2019-present 孙柯宝 浙ICP备19040188号 
+# footer: Copyright © 2019-present 孙柯宝 [浙ICP备19040188号](http://localhost:8080/) 
+# layout: sunkbao
+pageClass: foot-sun
 ---
+Copyright © 2019-present 孙柯宝 [浙ICP备19040188号](http://www.beian.miit.gov.cn) 
