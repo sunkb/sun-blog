@@ -1,11 +1,11 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+<!-- **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)* -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+<!-- **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)* -->
 
-- [MVVM](#mvvm)
+<!-- - [MVVM](#mvvm)
   - [脏数据检测](#%E8%84%8F%E6%95%B0%E6%8D%AE%E6%A3%80%E6%B5%8B)
   - [数据劫持](#%E6%95%B0%E6%8D%AE%E5%8A%AB%E6%8C%81)
   - [Proxy 与 Object.defineProperty 对比](#proxy-%E4%B8%8E-objectdefineproperty-%E5%AF%B9%E6%AF%94)
@@ -19,39 +19,93 @@
     - [判断列表差异算法实现](#%E5%88%A4%E6%96%AD%E5%88%97%E8%A1%A8%E5%B7%AE%E5%BC%82%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0)
     - [遍历子元素打标识](#%E9%81%8D%E5%8E%86%E5%AD%90%E5%85%83%E7%B4%A0%E6%89%93%E6%A0%87%E8%AF%86)
     - [渲染差异](#%E6%B8%B2%E6%9F%93%E5%B7%AE%E5%BC%82)
-  - [最后](#%E6%9C%80%E5%90%8E)
+  - [最后](#%E6%9C%80%E5%90%8E) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# MVVM
+## vue 2.0 和3.0的区别
+Vue3.0设计目标
 
-MVVM 由以下三个内容组成
+- 更小
+- 更快（*）
+- 加强TypeScript支持（*）
+- 加强API设计一致性
+- 提高自身可维护性
+- 开放更多底层功能
+### 观察机制
+
+3.0 可以对响应式跟踪进行调试，新增了一个创建可观察对象（observable）的 API。
+
+3.0 版本里将有一个基于 Proxy 的观察者，它会提供全语言覆盖的响应式跟踪。相比于 2.x 版本里基于 Object.defineProperty 的观察者，新的实现更加强大：
+
+- 可以检测属性的新增和删除
+- 可以检测数组索引的变化和 length 的变化
+- 支持 Map、Set、WeakMap 和 WeakSet
+
+1. 默认进行懒观察（lazy observation）。在 2.x 版本里，不过数据多大，都会在一开始就为其创建观察者。当数据很大时，这可能会在页面载入时造成明显的性能压力。3.x 版本，只会对「被用于渲染初始可见部分的数据」创建观察者，而且 3.x 的观察者更高效。
+
+2. 更精准的变更通知。比例来说：2.x 版本中，你使用 Vue.set 来给对象新增一个属性时，这个对象的所有 watcher 都会重新运行；3.x 版本中，只有依赖那个属性的 watcher 才会重新运行。
+
+### 不可变的可观察对象（Immutable observable）。
+
+我们可以给一个值创建多个不可变的版本，以防有人修改其属性，必须要在系统在内部临时将其解锁时才能修改其属性。这个机制能够用于冻结传给子组件的属性或者冻结 Vuex 状态树之外的状态变更。
+
+更强大的 debug 能力。我们使用新的 renderTracked 和 renderTriggered 钩子来精确地查明一个组件的 render 是在什么时候由谁触发的。
+
+很容易知道为什么一个组件会重新渲染
+
+### Virtual Dom 重构
+动静结合，不需要遍历整个树
+
+新策略将Virtual DOM更新性能能由与模板整体大小相关提升为与动态内容的数量相关
+
+### 更多编译优化：slot默认编译为函数（不存在父子组件强耦合
+
+插槽机制增强。所有由编译产生的插槽现在都是函数，这些函数会在子组件的 render 调用时被调用。这样一来，插槽中的依赖会被认为是子组件的依赖而不是父组件的依赖。这意味着：1、当插槽内容变化时，只有子组件重新渲染；2、当父组件重新渲染时，如果插槽内容没有变化，子组件就不需要重新渲染。这个特性提供了更精确的组件树层面上的变更检测，所以会减少很多无用的渲染。
+
+## Vue2.0依赖收集原理
+<!--参考链接 https://zhuanlan.zhihu.com/p/45081605 -->
+<!-- ## MVVM -->
+
+<!-- MVVM 由以下三个内容组成
 
 - View：界面
 - Model：数据模型
 - ViewModel：作为桥梁负责沟通 View 和 Model
 
-在 JQuery 时期，如果需要刷新 UI 时，需要先取到对应的 DOM 再更新 UI，这样数据和业务的逻辑就和页面有强耦合。
+在 MVVM 中，UI 是通过数据驱动的，数据一旦改变就会相应的刷新对应的 UI，UI 如果改变，也会改变对应的数据。这种方式就可以在业务处理中只关心数据的流转，而无需直接和页面打交道。ViewModel 只关心数据和业务的处理，不关心 View 如何处理数据，在这种情况下，View 和 Model 都可以独立出来，任何一方改变了也不一定需要改变另一方，并且可以将一些可复用的逻辑放在一个 ViewModel 中，让多个 View 复用这个 ViewModel。 -->
 
-在 MVVM 中，UI 是通过数据驱动的，数据一旦改变就会相应的刷新对应的 UI，UI 如果改变，也会改变对应的数据。这种方式就可以在业务处理中只关心数据的流转，而无需直接和页面打交道。ViewModel 只关心数据和业务的处理，不关心 View 如何处理数据，在这种情况下，View 和 Model 都可以独立出来，任何一方改变了也不一定需要改变另一方，并且可以将一些可复用的逻辑放在一个 ViewModel 中，让多个 View 复用这个 ViewModel。
+<!-- 在 MVVM 中，最核心的也就是数据双向绑定，例如 Vue 中的数据劫持。 -->
+### 观察者模式
+观察者模式是一种实现一对多关系解耦的行为设计模式。它主要涉及两个角色：观察目标、观察者。
+它的特点：观察者要直接订阅观察目标，观察目标一做出通知，观察者就要进行处理（这也是观察者模式区别于发布/订阅模式的最大区别）
 
-在 MVVM 中，最核心的也就是数据双向绑定，例如 Angluar 的脏数据检测，Vue 中的数据劫持。
+解释： 有些地方说观察者模式和发布/订阅模式是一样的，其实是不完全等同的，发布/订阅模式中，其解耦能力更近一步，发布者只要做好消息的发布，而不关心消息有没有订阅者订阅。而观察者模式则要求两端同时存在
+### 依赖收集
+Vue要能够知道一个数据是否被使用，实现这种机制的技术叫做依赖收集根据Vue官方文档的介绍，其原理如下图所示：
+![](https://pic1.zhimg.com/80/v2-5de7af21d4c2de951720c006f84b98fc_hd.jpg)
+- 每个组件实例都有相应的watcher实例 - 渲染组件的过程，会把属性记录为依赖 - 当我们操纵一个数据时，依赖项的setter会被调用，从而通知watcher重新计算，从而致使与之相关联的组件得以更新
+- 所以在getter里，我们进行依赖收集（所谓依赖，就是这个组件所需要依赖到的数据），当依赖的数据被设置时，setter能获得这个通知，从而告诉render()函数进行重新计算。
 
-## 脏数据检测
+- 上述vue依赖收集的场景，正是一种一对多的方式（一个数据变更了，多个用到这个数据的地方要能够做出处理），而且，依赖的数据变更了，就一定要做出处理，所以观察者模式天然适用于解决依赖收集的问题。 那么，在Vue依赖收集里：谁是观察者？谁是观察目标？ 显然： - 依赖的数据是观察目标 - 视图、计算属性、侦听器这些是观察者
+#### 角色
+Vue源码中实现依赖收集，实现了三个类： - Dep：扮演观察目标的角色，每一个数据都会有Dep类实例，它内部有个subs队列，subs就是subscribers的意思，保存着依赖本数据的观察者，当本数据变更时，调用dep.notify()通知观察者 - Watcher：扮演观察者的角色，进行观察者函数的包装处理。如render()函数，会被进行包装成一个Watcher实例 - Observer：辅助的可观测类，数组/对象通过它的转化，可成为可观测数据
+#### watcher 
+Watcher扮演的角色是观察者，它关心数据，在数据变化后能够获得通知，并作出处理。一个组件里可以有多个Watcher类实例，Watcher类包装观察者函数，而观察者函数使用数据。 观察者函数经过Watcher是这么被包装的： - 模板渲染：this._watcher = new Watcher(this, render, this._update) 
+- 在Watcher类里做的事情，概括起来则是： 1、传入组件实例、观察者函数、回调函数、选项，然后我们先解释清楚4个变量：deps、depIds、newDeps、newDepIds，它们的作用如下： - deps：缓存上一轮执行观察者函数用到的dep实例 - depIds：Hash表，用于快速查找 - newDeps：存储本轮执行观察者函数用到的dep实例 - newDepIds：Hash表，用于快速查找
 
-当触发了指定事件后会进入脏数据检测，这时会调用 `$digest` 循环遍历所有的数据观察者，判断当前值是否和先前的值有区别，如果检测到变化的话，会调用 `$watch` 函数，然后再次调用 `$digest` 循环直到发现没有变化。循环至少为二次 ，至多为十次。
-
-脏数据检测虽然存在低效的问题，但是不关心数据是通过什么方式改变的，都可以完成任务，但是这在 Vue 中的双向绑定是存在问题的。并且脏数据检测可以实现批量检测出更新的值，再去统一更新 UI，大大减少了操作 DOM 的次数。所以低效也是相对的，这就仁者见仁智者见智了。
-
-## 数据劫持
+2、进行初始求值，初始求值时，会调用watcher.get()方法 3、watcher.get()会做以下处理：初始准备工作、调用观察者函数计算、事后清理工作 4、在初始准备工作里，会将当前Watcher实例赋给Dep.target，清空数组newDeps、newDepIds 5、执行观察者函数，进行计算。由于数据观测阶段执行了defineReactive()，所以计算过程用到的数据会得以访问，从而触发数据的getter，从而执行watcher.addDep()方法，将特定的数据记为依赖 6、对每个数据执行watcher.addDep(dep)后，数据对应的dep如果在newDeps里不存在，就会加入到newDeps里，这是因为一次计算过程数据有可能被多次使用，但是同样的依赖只能收集一次。并且如果在deps不存在，表示上一轮计算中，当前watcher未依赖过某个数据，那个数据相应的dep.subs里也不存在当前watcher，所以要将当前watcher加入到数据的dep.subs里 7、进行事后清理工作，首先释放Dep.target，然后拿newDeps和deps进行对比，接着进行以下的处理： - newDeps里不存在，deps里存在的数据，表示是过期的缓存数据。相应的，从数据对应的dep.subs移除掉当前watcher - 将newDeps赋给deps，表示缓存本轮的计算结果，这样子下轮计算如果再依赖同一个数据，就不需要再收集了
+8、当某个数据更新时，由于进行了setter拦截，所以会对该数据的dep.subs这一观察者队列里的watchers进行通知，从而执行watcher.update()方法，而update()方法会重复求值过程（即为步骤3-7），从而使得观察者函数重新计算，而render()这种观察者函数重新计算的结果，就使得视图同步了最新的数据
+![总结](https://pic4.zhimg.com/80/v2-22c29a1c5ab746ad942e0c02417b05db_hd.jpg)
+### 数据劫持
 
 Vue 内部使用了 `Object.defineProperty()` 来实现双向绑定，通过这个函数可以监听到 `set` 和 `get` 的事件。
 
 ```js
-var data = { name: 'yck' }
+var data = { name: 'sun' }
 observe(data)
 let name = data.name // -> get value
-data.name = 'yyy' // -> change value
+data.name = 'kb' // -> change value
 
 function observe(obj) {
   // 判断类型
@@ -134,7 +188,7 @@ class Watcher {
     this.cb(this.value)
   }
 }
-var data = { name: 'yck' }
+var data = { name: 'sun' }
 observe(data)
 // 模拟解析到 `{{name}}` 触发的操作
 new Watcher(data, 'name', update)
@@ -172,7 +226,7 @@ function defineReactive(obj, key, val) {
 
 以上实现了一个简易的双向绑定，核心思路就是手动触发一次属性的 getter 来实现发布订阅的添加。
 
-## Proxy 与 Object.defineProperty 对比
+### Proxy 与 Object.defineProperty 对比
 
 `Object.defineProperty` 虽然已经能够实现双向绑定了，但是他还是有缺陷的。
 
@@ -246,8 +300,28 @@ let p = onWatch(obj, (v) => {
 p.a = 2 // bind `value` to `2`
 p.a // -> Get 'a' = 2
 ```
+## 父子组件通信
 
-# 路由原理
+- Prop（常用）
+- $emit (组件封装用的较多)
+- $attrs & $listeners (组件封装用的较多)
+- provide & inject （高阶组件/组件库用的较多）
+- $parent $root
+- vuex EventBus
+- .sync语法糖 （较少）
+
+## keep-alive
+keep-alive是Vue的内置组件，能在组件切换过程中将状态保留在内存中，防止重复渲染DOM。 可以实现前进刷新，后退不刷新的功能
+
+- 页面第一次进入，钩子的触发顺序
+created-> mounted-> activated，
+退出时触发 deactivated
+
+- 当再次进入（前进或者后退）时，只触发 activated
+
+- 事件挂载的方法等，只执行一次的放在 mounted 中；组件每次进去执行的方法放在 activated 中；
+
+<!-- ## 路由原理
 
 前端路由实现起来其实很简单，本质就是监听 URL 的变化，然后匹配路由规则，显示相应的页面，并且无须刷新。目前单页面使用的路由就只有两种实现方式
 
@@ -256,21 +330,20 @@ p.a // -> Get 'a' = 2
 
 `www.test.com/#/` 就是 Hash URL，当 `#` 后面的哈希值发生变化时，不会向服务器请求数据，可以通过 `hashchange` 事件来监听到 URL 的变化，从而进行跳转页面。
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042512.png)
+![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042512.png) -->
 
-History 模式是 HTML5 新推出的功能，比之 Hash URL 更加美观
+<!-- History 模式是 HTML5 新推出的功能，比之 Hash URL 更加美观
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042514.png)
+![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042514.png) -->
 
-# Virtual Dom
+## Virtual Dom
 
-[代码地址](https://github.com/KieSun/My-wheels/tree/master/Virtual%20Dom)
+<!-- [代码地址](https://github.com/KieSun/My-wheels/tree/master/Virtual%20Dom) -->
 
-## 为什么需要 Virtual Dom
+<!-- ### 为什么需要 Virtual Dom -->
 
 众所周知，操作 DOM 是很耗费性能的一件事情，既然如此，我们可以考虑通过 JS 对象来模拟 DOM 对象，毕竟操作 JS 对象比操作 DOM 省时的多。
 
-举个例子
 
 ```js
 // 假设这里模拟一个 ul，其中包含了 5 个 li
@@ -279,7 +352,7 @@ History 模式是 HTML5 新推出的功能，比之 Hash URL 更加美观
 [1, 2, 5, 4]
 ```
 
-从上述例子中，我们一眼就可以看出先前的 ul 中的第三个 li 被移除了，四五替换了位置。
+从上述例子中看出先前的 ul 中的第三个 li 被移除了，四五替换了位置。
 
 如果以上操作对应到 DOM 中，那么就是以下代码
 
@@ -370,7 +443,7 @@ export default class Element {
 }
 ```
 
-## Virtual Dom 算法简述
+### Virtual Dom 算法
 
 既然我们已经通过 JS 来模拟实现了 DOM，那么接下来的难点就在于如何判断旧的对象和新的对象之间的差异。
 
@@ -383,7 +456,7 @@ DOM 是多叉树的结构，如果需要完整的对比两颗树的差异，那�
 - 首先从上至下，从左往右遍历对象，也就是树的深度遍历，这一步中会给每个节点添加索引，便于最后渲染差异
 - 一旦节点有子元素，就去判断子元素是否有不同
 
-## Virtual Dom 算法实现
+<!-- ### Virtual Dom 算法实现 -->
 
 ### 树的递归
 
@@ -696,7 +769,7 @@ function changeDom(node, changes, noChild) {
 }
 ```
 
-## 最后
+### 最后
 
 Virtual Dom 算法的实现也就是以下三步
 
@@ -724,7 +797,7 @@ setTimeout(() => {
 }, 1000)
 ```
 
-当然目前的实现还略显粗糙，但是对于理解 Virtual Dom 算法来说已经是完全足够的了。
+<!-- 当然目前的实现还略显粗糙，但是对于理解 Virtual Dom 算法来说已经是完全足够的了。
 - [NextTick 原理分析](#nexttick-%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90)
 - [生命周期分析](#%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%88%86%E6%9E%90)
 - [VueRouter 源码解析](#vuerouter-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
@@ -733,11 +806,11 @@ setTimeout(() => {
   - [VueRouter 实例化](#vuerouter-%E5%AE%9E%E4%BE%8B%E5%8C%96)
   - [创建路由匹配对象](#%E5%88%9B%E5%BB%BA%E8%B7%AF%E7%94%B1%E5%8C%B9%E9%85%8D%E5%AF%B9%E8%B1%A1)
   - [路由初始化](#%E8%B7%AF%E7%94%B1%E5%88%9D%E5%A7%8B%E5%8C%96)
-  - [路由跳转](#%E8%B7%AF%E7%94%B1%E8%B7%B3%E8%BD%AC)
+  - [路由跳转](#%E8%B7%AF%E7%94%B1%E8%B7%B3%E8%BD%AC) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# NextTick 原理分析
+## NextTick 原理
 
 `nextTick` 可以让我们在下次 DOM 更新循环结束之后执行延迟回调，用于获得更新后的 DOM。
 
@@ -806,7 +879,7 @@ export function nextTick(cb?: Function, ctx?: Object) {
 }
 ```
 
-# 生命周期分析
+## 生命周期分析
 
 生命周期函数就是组件在初始化或者数据更新时会触发的钩子函数。
 
@@ -935,14 +1008,14 @@ Vue.prototype.$destroy = function() {
 
 在执行销毁操作前会调用 `beforeDestroy` 钩子函数，然后进行一系列的销毁操作，如果有子组件的话，也会递归销毁子组件，所有子组件都销毁完毕后才会执行根组件的 `destroyed` 钩子函数。
 
-# VueRouter 源码解析
+## VueRouter 源码解析
 
-## 重要函数思维导图
+### 重要函数思维导图
 
 以下思维导图罗列了源码中重要的一些函数
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042517.png)
 
-## 路由注册
+### 路由注册
 
 在开始之前，推荐大家 clone 一份源码对照着看。因为篇幅较长，函数间的跳转也很多。
 
@@ -1016,7 +1089,7 @@ export function install (Vue) {
 ```
 对于路由注册来说，核心就是调用 `Vue.use(VueRouter)`，使得 VueRouter 可以使用 Vue。然后通过 Vue 来调用 VueRouter 的 `install` 函数。在该函数中，核心就是给组件混入钩子函数和全局注册两个路由组件。
 
-## VueRouter 实例化
+### VueRouter 实例化
 在安装插件后，对 VueRouter 进行实例化。
 ```js
 const Home = { template: '<div>home</div>' }
@@ -1072,7 +1145,7 @@ constructor(options: RouterOptions = {}) {
 ```
 在实例化 VueRouter 的过程中，核心是创建一个路由匹配对象，并且根据 mode 来采取不同的路由方式。
 
-## 创建路由匹配对象
+### 创建路由匹配对象
 
 ```js
 export function createMatcher (
@@ -1224,7 +1297,7 @@ function addRouteRecord (
 }
 ```
 以上就是创建路由匹配对象的全过程，通过用户配置的路由规则来创建对应的路由映射表。
-## 路由初始化
+### 路由初始化
 
 当根组件调用 `beforeCreate` 钩子函数时，会执行以下代码
 ```js
@@ -1278,7 +1351,7 @@ init(app: any /* Vue component instance */) {
   }
 ```
 在路由初始化时，核心就是进行路由的跳转，改变 URL 然后渲染对应的组件。接下来来看一下路由是如何进行跳转的。
-## 路由跳转
+### 路由跳转
 ```js
 transitionTo (location: RawLocation, onComplete?: Function, onAbort?: Function) {
   // 获取匹配的路由信息

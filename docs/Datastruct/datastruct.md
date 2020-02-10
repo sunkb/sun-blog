@@ -1,8 +1,8 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+<!-- **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)* -->
 
-- [栈](#%E6%A0%88)
+<!-- - [栈](#%E6%A0%88)
   - [概念](#%E6%A6%82%E5%BF%B5)
   - [实现](#%E5%AE%9E%E7%8E%B0)
   - [应用](#%E5%BA%94%E7%94%A8)
@@ -29,13 +29,13 @@
   - [实现](#%E5%AE%9E%E7%8E%B0-6)
 - [堆](#%E5%A0%86)
   - [概念](#%E6%A6%82%E5%BF%B5-6)
-  - [实现大根堆](#%E5%AE%9E%E7%8E%B0%E5%A4%A7%E6%A0%B9%E5%A0%86)
+  - [实现大根堆](#%E5%AE%9E%E7%8E%B0%E5%A4%A7%E6%A0%B9%E5%A0%86) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# 栈
+## 栈
 
-## 概念
+### 概念
 
 栈是一个线性结构，在计算机中是一个相当常见的数据结构。
 
@@ -43,7 +43,7 @@
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043108.png)
 
-## 实现
+### 实现
 
 每种数据结构都可以用很多种方式来实现，其实可以把栈看成是数组的一个子集，所以这里使用数组来实现
 
@@ -70,7 +70,7 @@ class Stack {
 }
 ```
 
-## 应用
+### 应用
 
 选取了 [LeetCode 上序号为 20 的题目](https://leetcode.com/problems/valid-parentheses/submissions/1)
 
@@ -100,17 +100,17 @@ var isValid = function (s) {
 };
 ```
 
-# 队列
+## 队列
 
-## 概念
+### 概念
 
 队列一个线性结构，特点是在某一端添加数据，在另一端删除数据，遵循先进先出的原则。
-
+单链队列和循环队列
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043109.png)
 
-## 实现
+<!-- ### 实现
 
-这里会讲解两种实现队列的方式，分别是单链队列和循环队列。
+这里会讲解两种实现队列的方式，分别是单链队列和循环队列。 -->
 
 ### 单链队列
 
@@ -139,7 +139,7 @@ class Queue {
 
 因为单链队列在出队操作的时候需要 O(n) 的时间复杂度，所以引入了循环队列。循环队列的出队操作平均是 O(1) 的时间复杂度。
 
-## 循环队列
+### 循环队列
 
 ```js
 class SqQueue {
@@ -203,15 +203,15 @@ class SqQueue {
 }
 ```
 
-# 链表
+## 链表
 
-## 概念
+### 概念
 
 链表是一个线性结构，同时也是一个天然的递归结构。链表结构可以充分利用计算机内存空间，实现灵活的内存动态管理。但是链表失去了数组随机读取的优点，同时链表由于增加了结点的指针域，空间开销比较大。
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043110.png)
 
-## 实现
+### 实现
 
 单向链表
 
@@ -285,9 +285,9 @@ class LinkList {
   }
 }
 ```
-# 树
+## 树
 
-## 二叉树
+### 二叉树
 
 树拥有很多种结构，二叉树是树中最常用的结构，同时也是一个天然的递归结构。
 
@@ -295,7 +295,7 @@ class LinkList {
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043111.png)
 
-## 二分搜索树
+### 二分搜索树
 
 二分搜索树也是二叉树，拥有二叉树的特性。但是区别在于二分搜索树每个节点的值都比他的左子树的值大，比右子树的值小。
 
@@ -711,9 +711,9 @@ class AVL {
 
 
 
-# Trie
+## Trie
 
-## 概念
+### 概念
 
 在计算机科学，**trie**，又称**前缀树**或**字典树**，是一种有序树，用于保存关联数组，其中的键通常是字符串。
 
@@ -725,7 +725,7 @@ class AVL {
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043113.png)、
 
-## 实现
+### 实现
 
 总得来说 Trie 的实现相比别的树结构来说简单的很多，实现就以搜索英文字符为例。
 
@@ -794,9 +794,9 @@ class Trie {
 }
 ```
 
-# 并查集
+## 并查集
 
-## 概念
+### 概念
 
 并查集是一种特殊的树结构，用于处理一些不交集的合并及查询问题。该结构中每个节点都有一个父节点，如果只有当前一个节点，那么该节点的父节点指向自己。
 
@@ -807,7 +807,7 @@ class Trie {
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-043114.png)
 
-## 实现
+### 实现
 
 ```js
 class DisjointSet {
@@ -856,9 +856,9 @@ class DisjointSet {
 }
 ```
 
-# 堆
+## 堆
 
-## 概念
+### 概念
 
 堆通常是一个可以被看做一棵树的数组对象。
 
@@ -871,7 +871,7 @@ class DisjointSet {
 
 优先队列也完全可以用堆来实现，操作是一模一样的。
 
-## 实现大根堆
+### 实现大根堆
 
 堆的每个节点的左边子节点索引是 `i * 2 + 1`，右边是 `i * 2 + 2`，父节点是 `(i - 1) /2`。
 

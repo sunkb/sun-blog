@@ -1,6 +1,6 @@
 ---
 home: true
-heroImage: http://q285gdauq.bkt.clouddn.com/sunligjt.jpg
+heroImage: http://cdn.sunkb.cn/自拍sun.jpeg
 heroText: Hello,I'm sunkb
 tagline: 种一棵树最好的时间是十年前，其次就是现在
 actionText: 进入前端

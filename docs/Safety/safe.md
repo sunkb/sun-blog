@@ -1,724 +1,250 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+<!-- **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)* -->
 
-- [MVVM](#mvvm)
-  - [脏数据检测](#%E8%84%8F%E6%95%B0%E6%8D%AE%E6%A3%80%E6%B5%8B)
-  - [数据劫持](#%E6%95%B0%E6%8D%AE%E5%8A%AB%E6%8C%81)
-  - [Proxy 与 Object.defineProperty 对比](#proxy-%E4%B8%8E-objectdefineproperty-%E5%AF%B9%E6%AF%94)
-- [路由原理](#%E8%B7%AF%E7%94%B1%E5%8E%9F%E7%90%86)
-- [Virtual Dom](#virtual-dom)
-  - [为什么需要 Virtual Dom](#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-virtual-dom)
-  - [Virtual Dom 算法简述](#virtual-dom-%E7%AE%97%E6%B3%95%E7%AE%80%E8%BF%B0)
-  - [Virtual Dom 算法实现](#virtual-dom-%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0)
-    - [树的递归](#%E6%A0%91%E7%9A%84%E9%80%92%E5%BD%92)
-    - [判断属性的更改](#%E5%88%A4%E6%96%AD%E5%B1%9E%E6%80%A7%E7%9A%84%E6%9B%B4%E6%94%B9)
-    - [判断列表差异算法实现](#%E5%88%A4%E6%96%AD%E5%88%97%E8%A1%A8%E5%B7%AE%E5%BC%82%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0)
-    - [遍历子元素打标识](#%E9%81%8D%E5%8E%86%E5%AD%90%E5%85%83%E7%B4%A0%E6%89%93%E6%A0%87%E8%AF%86)
-    - [渲染差异](#%E6%B8%B2%E6%9F%93%E5%B7%AE%E5%BC%82)
-  - [最后](#%E6%9C%80%E5%90%8E)
+<!-- - [XSS](#xss)
+  - [如何攻击](#%E5%A6%82%E4%BD%95%E6%94%BB%E5%87%BB)
+  - [如何防御](#%E5%A6%82%E4%BD%95%E9%98%B2%E5%BE%A1)
+  - [CSP](#csp)
+- [CSRF](#csrf)
+  - [如何攻击](#%E5%A6%82%E4%BD%95%E6%94%BB%E5%87%BB-1)
+  - [如何防御](#%E5%A6%82%E4%BD%95%E9%98%B2%E5%BE%A1-1)
+    - [SameSite](#samesite)
+    - [验证 Referer](#%E9%AA%8C%E8%AF%81-referer)
+    - [Token](#token)
+- [密码安全](#%E5%AF%86%E7%A0%81%E5%AE%89%E5%85%A8)
+  - [加盐](#%E5%8A%A0%E7%9B%90) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# MVVM
+## XSS
 
-MVVM 由以下三个内容组成
+> **跨网站指令码**（英语：Cross-site scripting，通常简称为：XSS）是一种网站应用程式的安全漏洞攻击，是[代码注入](https://www.wikiwand.com/zh-hans/%E4%BB%A3%E7%A2%BC%E6%B3%A8%E5%85%A5)的一种。它允许恶意使用者将程式码注入到网页上，其他使用者在观看网页时就会受到影响。这类攻击通常包含了 HTML 以及使用者端脚本语言。
 
-- View：界面
-- Model：数据模型
-- ViewModel：作为桥梁负责沟通 View 和 Model
+XSS 分为三种：反射型，存储型和 DOM-based
 
-在 JQuery 时期，如果需要刷新 UI 时，需要先取到对应的 DOM 再更新 UI，这样数据和业务的逻辑就和页面有强耦合。
+### 如何攻击
 
-在 MVVM 中，UI 是通过数据驱动的，数据一旦改变就会相应的刷新对应的 UI，UI 如果改变，也会改变对应的数据。这种方式就可以在业务处理中只关心数据的流转，而无需直接和页面打交道。ViewModel 只关心数据和业务的处理，不关心 View 如何处理数据，在这种情况下，View 和 Model 都可以独立出来，任何一方改变了也不一定需要改变另一方，并且可以将一些可复用的逻辑放在一个 ViewModel 中，让多个 View 复用这个 ViewModel。
+XSS 通过修改 HTML 节点或者执行 JS 代码来攻击网站。
 
-在 MVVM 中，最核心的也就是数据双向绑定，例如 Angluar 的脏数据检测，Vue 中的数据劫持。
-
-## 脏数据检测
-
-当触发了指定事件后会进入脏数据检测，这时会调用 `$digest` 循环遍历所有的数据观察者，判断当前值是否和先前的值有区别，如果检测到变化的话，会调用 `$watch` 函数，然后再次调用 `$digest` 循环直到发现没有变化。循环至少为二次 ，至多为十次。
-
-脏数据检测虽然存在低效的问题，但是不关心数据是通过什么方式改变的，都可以完成任务，但是这在 Vue 中的双向绑定是存在问题的。并且脏数据检测可以实现批量检测出更新的值，再去统一更新 UI，大大减少了操作 DOM 的次数。所以低效也是相对的，这就仁者见仁智者见智了。
-
-## 数据劫持
-
-Vue 内部使用了 `Object.defineProperty()` 来实现双向绑定，通过这个函数可以监听到 `set` 和 `get` 的事件。
-
-```js
-var data = { name: 'yck' }
-observe(data)
-let name = data.name // -> get value
-data.name = 'yyy' // -> change value
-
-function observe(obj) {
-  // 判断类型
-  if (!obj || typeof obj !== 'object') {
-    return
-  }
-  Object.keys(obj).forEach(key => {
-    defineReactive(obj, key, obj[key])
-  })
-}
-
-function defineReactive(obj, key, val) {
-  // 递归子属性
-  observe(val)
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get: function reactiveGetter() {
-      console.log('get value')
-      return val
-    },
-    set: function reactiveSetter(newVal) {
-      console.log('change value')
-      val = newVal
-    }
-  })
-}
-```
-
-以上代码简单的实现了如何监听数据的 `set` 和 `get` 的事件，但是仅仅如此是不够的，还需要在适当的时候给属性添加发布订阅
+例如通过 URL 获取某些参数
 
 ```html
-<div>
-    {{name}}
-</div>
-```
-::: v-pre
-在解析如上模板代码时，遇到 `{{name}}` 就会给属性 `name` 添加发布订阅。
-:::
-
-```js
-// 通过 Dep 解耦
-class Dep {
-  constructor() {
-    this.subs = []
-  }
-  addSub(sub) {
-    // sub 是 Watcher 实例
-    this.subs.push(sub)
-  }
-  notify() {
-    this.subs.forEach(sub => {
-      sub.update()
-    })
-  }
-}
-// 全局属性，通过该属性配置 Watcher
-Dep.target = null
-
-function update(value) {
-  document.querySelector('div').innerText = value
-}
-
-class Watcher {
-  constructor(obj, key, cb) {
-    // 将 Dep.target 指向自己
-    // 然后触发属性的 getter 添加监听
-    // 最后将 Dep.target 置空
-    Dep.target = this
-    this.cb = cb
-    this.obj = obj
-    this.key = key
-    this.value = obj[key]
-    Dep.target = null
-  }
-  update() {
-    // 获得新值
-    this.value = this.obj[this.key]
-    // 调用 update 方法更新 Dom
-    this.cb(this.value)
-  }
-}
-var data = { name: 'yck' }
-observe(data)
-// 模拟解析到 `{{name}}` 触发的操作
-new Watcher(data, 'name', update)
-// update Dom innerText
-data.name = 'yyy' 
+<!-- http://www.domain.com?name=<script>alert(1)</script> -->
+<div>{{name}}</div>                                                  
 ```
 
-接下来,对 `defineReactive` 函数进行改造
+上述 URL 输入可能会将 HTML 改为 `<div><script>alert(1)</script></div>` ，这样页面中就凭空多了一段可执行脚本。这种攻击类型是反射型攻击，也可以说是 DOM-based 攻击。
+
+也有另一种场景，比如写了一篇包含攻击代码 `<script>alert(1)</script>` 的文章，那么可能浏览文章的用户都会被攻击到。这种攻击类型是存储型攻击，也可以说是 DOM-based 攻击，并且这种攻击打击面更广。
+
+### 如何防御
+
+最普遍的做法是转义输入输出的内容，对于引号，尖括号，斜杠进行转义
 
 ```js
-function defineReactive(obj, key, val) {
-  // 递归子属性
-  observe(val)
-  let dp = new Dep()
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get: function reactiveGetter() {
-      console.log('get value')
-      // 将 Watcher 添加到订阅
-      if (Dep.target) {
-        dp.addSub(Dep.target)
-      }
-      return val
-    },
-    set: function reactiveSetter(newVal) {
-      console.log('change value')
-      val = newVal
-      // 执行 watcher 的 update 方法
-      dp.notify()
-    }
-  })
+function escape(str) {
+	str = str.replace(/&/g, "&amp;");
+	str = str.replace(/</g, "&lt;");
+	str = str.replace(/>/g, "&gt;");
+	str = str.replace(/"/g, "&quto;");
+	str = str.replace(/'/g, "&#39;");
+	str = str.replace(/`/g, "&#96;");
+    str = str.replace(/\//g, "&#x2F;");
+    return str
 }
 ```
 
-以上实现了一个简易的双向绑定，核心思路就是手动触发一次属性的 getter 来实现发布订阅的添加。
-
-## Proxy 与 Object.defineProperty 对比
-
-`Object.defineProperty` 虽然已经能够实现双向绑定了，但是他还是有缺陷的。
-
-1. 只能对属性进行数据劫持，所以需要深度遍历整个对象
-2. 对于数组不能监听到数据的变化
-
-虽然 Vue 中确实能检测到数组数据的变化，但是其实是使用了 hack 的办法，并且也是有缺陷的。
+通过转义可以将攻击代码 `<script>alert(1)</script>` 变成
 
 ```js
-const arrayProto = Array.prototype
-export const arrayMethods = Object.create(arrayProto)
-// hack 以下几个函数
-const methodsToPatch = [
-  'push',
-  'pop',
-  'shift',
-  'unshift',
-  'splice',
-  'sort',
-  'reverse'
-]
-methodsToPatch.forEach(function (method) {
-  // 获得原生函数
-  const original = arrayProto[method]
-  def(arrayMethods, method, function mutator (...args) {
-    // 调用原生函数
-    const result = original.apply(this, args)
-    const ob = this.__ob__
-    let inserted
-    switch (method) {
-      case 'push':
-      case 'unshift':
-        inserted = args
-        break
-      case 'splice':
-        inserted = args.slice(2)
-        break
-    }
-    if (inserted) ob.observeArray(inserted)
-    // 触发更新
-    ob.dep.notify()
-    return result
-  })
-})
+// -> &lt;script&gt;alert(1)&lt;&#x2F;script&gt;
+escape('<script>alert(1)</script>')
 ```
 
-反观 Proxy 就没以上的问题，原生支持监听数组变化，并且可以直接对整个对象进行拦截，所以 Vue 也将在下个大版本中使用 Proxy 替换 Object.defineProperty
+对于显示富文本来说，不能通过上面的办法来转义所有字符，因为这样会把需要的格式也过滤掉。这种情况通常采用白名单过滤的办法，当然也可以通过黑名单过滤，但是考虑到需要过滤的标签和标签属性实在太多，更加推荐使用白名单的方式。
 
 ```js
-let onWatch = (obj, setBind, getLogger) => {
-  let handler = {
-    get(target, property, receiver) {
-      getLogger(target, property)
-      return Reflect.get(target, property, receiver);
-    },
-    set(target, property, value, receiver) {
-      setBind(value);
-      return Reflect.set(target, property, value);
-    }
-  };
-  return new Proxy(obj, handler);
-};
-
-let obj = { a: 1 }
-let value
-let p = onWatch(obj, (v) => {
-  value = v
-}, (target, property) => {
-  console.log(`Get '${property}' = ${target[property]}`);
-})
-p.a = 2 // bind `value` to `2`
-p.a // -> Get 'a' = 2
+var xss = require("xss");
+var html = xss('<h1 id="title">XSS Demo</h1><script>alert("xss");</script>');
+// -> <h1>XSS Demo</h1>&lt;script&gt;alert("xss");&lt;/script&gt;
+console.log(html);
 ```
 
-# 路由原理
+以上示例使用了 `js-xss` 来实现。可以看到在输出中保留了 `h1` 标签且过滤了 `script` 标签
 
-前端路由实现起来其实很简单，本质就是监听 URL 的变化，然后匹配路由规则，显示相应的页面，并且无须刷新。目前单页面使用的路由就只有两种实现方式
+### CSP
 
-- hash 模式
-- history 模式
+> 内容安全策略   ([CSP](https://developer.mozilla.org/en-US/docs/Glossary/CSP)) 是一个额外的安全层，用于检测并削弱某些特定类型的攻击，包括跨站脚本 ([XSS](https://developer.mozilla.org/en-US/docs/Glossary/XSS)) 和数据注入攻击等。无论是数据盗取、网站内容污染还是散发恶意软件，这些攻击都是主要的手段。
 
-`www.test.com/#/` 就是 Hash URL，当 `#` 后面的哈希值发生变化时，不会向服务器请求数据，可以通过 `hashchange` 事件来监听到 URL 的变化，从而进行跳转页面。
+我们可以通过 CSP 来尽量减少 XSS 攻击。CSP 本质上也是建立白名单，规定了浏览器只能够执行特定来源的代码。
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042512.png)
+通常可以通过 HTTP Header 中的 `Content-Security-Policy` 来开启 CSP
 
-History 模式是 HTML5 新推出的功能，比之 Hash URL 更加美观
+- 只允许加载本站资源
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042514.png)
+  ```http
+  Content-Security-Policy: default-src ‘self’
+  ```
 
-# Virtual Dom
+- 只允许加载 HTTPS 协议图片
 
-[代码地址](https://github.com/KieSun/My-wheels/tree/master/Virtual%20Dom)
+  ```http
+  Content-Security-Policy: img-src https://*
+  ```
 
-## 为什么需要 Virtual Dom
+- 允许加载任何来源框架
 
-众所周知，操作 DOM 是很耗费性能的一件事情，既然如此，我们可以考虑通过 JS 对象来模拟 DOM 对象，毕竟操作 JS 对象比操作 DOM 省时的多。
+  ```http
+  Content-Security-Policy: child-src 'none'
+  ```
 
-举个例子
+更多属性可以查看 [这里](https://content-security-policy.com/)
+
+### http-only
+
+不能通过 JS 访问 Cookie，减少 XSS 攻击
+
+## CSRF
+
+> **跨站请求伪造**（英语：Cross-site request forgery），也被称为 **one-click attack** 或者 **session riding**，通常缩写为 **CSRF** 或者 **XSRF**， 是一种挟制用户在当前已登录的Web应用程序上执行非本意的操作的攻击方法。[[1\]](https://www.wikiwand.com/zh/%E8%B7%A8%E7%AB%99%E8%AF%B7%E6%B1%82%E4%BC%AA%E9%80%A0#citenoteRistic1) 跟[跨網站指令碼](https://www.wikiwand.com/zh/%E8%B7%A8%E7%B6%B2%E7%AB%99%E6%8C%87%E4%BB%A4%E7%A2%BC)（XSS）相比，**XSS** 利用的是用户对指定网站的信任，CSRF 利用的是网站对用户网页浏览器的信任。
+
+简单点说，CSRF 就是利用用户的登录态发起恶意请求。
+
+### 如何攻击
+
+假设网站中有一个通过 Get 请求提交用户评论的接口，那么攻击者就可以在钓鱼网站中加入一个图片，图片的地址就是评论接口
+
+```html
+<img src="http://www.domain.com/xxx?comment='attack'"/>
+```
+
+ 如果接口是 Post 提交的，就相对麻烦点，需要用表单来提交接口
+
+```html
+<form action="http://www.domain.com/xxx" id="CSRF" method="post">
+    <input name="comment" value="attack" type="hidden">
+</form>
+```
+
+### 如何防御
+
+防范 CSRF 可以遵循以下几种规则：
+
+1. Get 请求不对数据进行修改
+2. 不让第三方网站访问到用户 Cookie
+3. 阻止第三方网站请求接口
+4. 请求时附带验证信息，比如验证码或者 token
+
+#### SameSite
+
+可以对 Cookie 设置 `SameSite` 属性。该属性设置 Cookie 不随着跨域请求发送，该属性可以很大程度减少 CSRF 的攻击，但是该属性目前并不是所有浏览器都兼容。
+
+#### 验证 Referer
+
+对于需要防范 CSRF 的请求，我们可以通过验证 Referer 来判断该请求是否为第三方网站发起的。
+
+#### Token
+
+服务器下发一个随机 Token（算法不能复杂），每次发起请求时将 Token 携带上，服务器验证 Token 是否有效。
+
+## 密码安全
+
+密码安全虽然大多是后端的事情，但是作为一名优秀的前端程序员也需要熟悉这方面的知识。
+
+### 加盐
+
+对于密码存储来说，必然是不能明文存储在数据库中的，否则一旦数据库泄露，会对用户造成很大的损失。并且不建议只对密码单纯通过加密算法加密，因为存在彩虹表的关系。
+
+通常需要对密码加盐，然后进行几次不同加密算法的加密。
 
 ```js
-// 假设这里模拟一个 ul，其中包含了 5 个 li
-[1, 2, 3, 4, 5]
-// 这里替换上面的 li
-[1, 2, 5, 4]
+// 加盐也就是给原密码添加字符串，增加原密码长度
+sha256(sha1(md5(salt + password + salt)))
 ```
 
-从上述例子中，我们一眼就可以看出先前的 ul 中的第三个 li 被移除了，四五替换了位置。
+但是加盐并不能阻止别人盗取账号，只能确保即使数据库泄露，也不会暴露用户的真实密码。一旦攻击者得到了用户的账号，可以通过暴力破解的方式破解密码。对于这种情况，通常使用验证码增加延时或者限制尝试次数的方式。并且一旦用户输入了错误的密码，也不能直接提示用户输错密码，而应该提示账号或密码错误。
 
-如果以上操作对应到 DOM 中，那么就是以下代码
+## 流量劫持
 
-```js
-// 删除第三个 li
-ul.childNodes[2].remove()
-// 将第四个 li 和第五个交换位置
-let fromNode = ul.childNodes[4]
-let toNode = node.childNodes[3]
-let cloneFromNode = fromNode.cloneNode(true)
-let cloenToNode = toNode.cloneNode(true)
-ul.replaceChild(cloneFromNode, toNode)
-ul.replaceChild(cloenToNode, fromNode)
-```
+1. 首先访问 DNS 服务器，将域名转换为 IP 地址。 路由器 -> dns
+2. 访问这个 IP 地址，这样用户就访问了目标网站。 路由器 -> 网站服务器
+3. 如果是一个建设良好的网站，一般会把静态资源放在 CDN 上。 路由器 -> cdn
 
-当然在实际操作中，我们还需要给每个节点一个标识，作为判断是同一个节点的依据。所以这也是 Vue 和 React 中官方推荐列表里的节点使用唯一的 `key` 来保证性能。
+### DNS 的劫持与防治
 
-那么既然 DOM 对象可以通过 JS 对象来模拟，反之也可以通过 JS 对象来渲染出对应的 DOM
+#### 如何污染 DNS
 
-以下是一个 JS 对象模拟 DOM 对象的简单实现
+1. 在用户设备上动手。这个主要是通过一些恶意软件实现的，比如早期一些流氓软件会在用户本机篡改hosts文件，影响用户的搜索引擎工作。
 
-```js
-export default class Element {
-  /**
-   * @param {String} tag 'div'
-   * @param {Object} props { class: 'item' }
-   * @param {Array} children [ Element1, 'text']
-   * @param {String} key option
-   */
-  constructor(tag, props, children, key) {
-    this.tag = tag
-    this.props = props
-    if (Array.isArray(children)) {
-      this.children = children
-    } else if (isString(children)) {
-      this.key = children
-      this.children = null
-    }
-    if (key) this.key = key
-  }
-  // 渲染
-  render() {
-    let root = this._createElement(
-      this.tag,
-      this.props,
-      this.children,
-      this.key
-    )
-    document.body.appendChild(root)
-    return root
-  }
-  create() {
-    return this._createElement(this.tag, this.props, this.children, this.key)
-  }
-  // 创建节点
-  _createElement(tag, props, child, key) {
-    // 通过 tag 创建节点
-    let el = document.createElement(tag)
-    // 设置节点属性
-    for (const key in props) {
-      if (props.hasOwnProperty(key)) {
-        const value = props[key]
-        el.setAttribute(key, value)
-      }
-    }
-    if (key) {
-      el.setAttribute('key', key)
-    }
-    // 递归添加子节点
-    if (child) {
-      child.forEach(element => {
-        let child
-        if (element instanceof Element) {
-          child = this._createElement(
-            element.tag,
-            element.props,
-            element.children,
-            element.key
-          )
-        } else {
-          child = document.createTextNode(element)
-        }
-        el.appendChild(child)
-      })
-    }
-    return el
-  }
-}
-```
+2. 污染中间链路设备。由于 DNS 查询是基于 UDP 协议明文发送的，因此在任意中间设备上——比如路由器——进行中间人攻击，修改 UDP 包的内容，就可以影响 DNS 的结果了。
 
-## Virtual Dom 算法简述
+3. 入侵 DNS 服务器。这是一种成本比较高的方案，看起来似乎很困难，但 DNS 是一种相对古老的技术，其服务软件的实现可能已经年久失修，别有用心的攻击者可以寻找一些缺乏维护的 DNS 服务器，施行攻击。另外，有时 DNS 服务器上不止运行 DNS 软件，还会有一些其他的软件也在运行，比如同时也启动了 HTTP 服务等，这时攻击者也可以通过这些软件的漏洞来控制服务器，进而影响 DNS 的解析。由于 DNS 的缓存和上下传递关系，一旦有 DNS 服务器被影响，就会一次影响很多用户的访问，因此非常危险。
 
-既然我们已经通过 JS 来模拟实现了 DOM，那么接下来的难点就在于如何判断旧的对象和新的对象之间的差异。
+#### 如何抵御 DNS 投毒
 
-DOM 是多叉树的结构，如果需要完整的对比两颗树的差异，那么需要的时间复杂度会是 O(n ^ 3)，这个复杂度肯定是不能接受的。于是 React 团队优化了算法，实现了 O(n) 的复杂度来对比差异。
+1. DNS over TLS。这种协议是在 TLS 协议之上传输 DNS 内容，有点类似 HTTPS 和 TLS 的关系。
 
-实现 O(n) 复杂度的关键就是只对比同层的节点，而不是跨层对比，这也是考虑到在实际业务中很少会去跨层的移动 DOM 元素。
+2. DNS over HTTP。用 HTTP 协议来传输 DNS ，也是可以的。国内厂商当中对这种方案的支持较多。最简单的实现是使用一个 固定的 IP 地址作为域名服务器，每次不发生 UDP ，而是向这台服务器发送 HTTP 请求来获取解析结果。但通常很难签发相应的证书给固定 IP，因此也有些厂商自己对 HTTP 报文进行加密，从而防止这些解析结果再被中间人篡改。
 
-所以判断差异的算法就分为了两步
+3. DNS over HTTPS。和第二点比较类似，区别是使用了 HTTPS 协议。根据我的观察，采用这种方案的 Google 和 Cloudflare 都使用的是域名而非固定 IP ，因此还是要先解析一次域名服务器自身的域名才可以进行真正的查询。这可能会导致再次被中间人扰乱，从而迫使用户降级到普通的 UDP 方式上。
 
-- 首先从上至下，从左往右遍历对象，也就是树的深度遍历，这一步中会给每个节点添加索引，便于最后渲染差异
-- 一旦节点有子元素，就去判断子元素是否有不同
+### HTTP 流量劫持
 
-## Virtual Dom 算法实现
+#### Content Security Policy
 
-### 树的递归
+CSP 原本是为了和 XSS 对抗而产生的一种技术方案，其原理是在 HTML 加载的时候，指定每种资源的 URL 白名单规则，防止 XSS 的运行和数据外送。但如果巧妙利用规则，也可以让所有的资源强制走 https ，这样就可以降低流量劫持的可能性。
 
-首先我们来实现树的递归算法，在实现该算法前，先来考虑下两个节点对比会有几种情况
+CSP 用来防劫持的缺点也比较明显：
 
-1. 新的节点的 `tagName` 或者 `key` 和旧的不同，这种情况代表需要替换旧的节点，并且也不再需要遍历新旧节点的子元素了，因为整个旧节点都被删掉了
-2. 新的节点的 `tagName` 和 `key`（可能都没有）和旧的相同，开始遍历子树
-3. 没有新的节点，那么什么都不用做
+1. CSP 可以用在 HTTP 页面，这也是我们想在 HTTP 页面用它做防御的一个原因。但中间人攻击可以在链路上直接移除 CSP 的相关标记，导致 CSP 全部失效。
+2. CSP 规则设置比较复杂。不然也不会有一个网站专门用来查询和生成规则了。设置不当很容易玩脱，会直接导致你的资源不可用。
+3. 影响动态创建脚本。CSP 存在的一部分意义就是阻止动态创建脚本这种行为，这是防御 XSS 的一种办法。但同时市面上很多技术方案也是基于这种方式做的，比如一些统计 SDK 之类的，甚至有些开发人员的开发模式即是如此。
 
-```js
-import { StateEnums, isString, move } from './util'
-import Element from './element'
+#### Subresource Integrity
+SRI 是专门用来校验资源的一种方案，它读取资源标签中的integrity属性，将其中的信息摘要值，和资源实际的信息摘要值进行对比，如果发现无法匹配，那么浏览器就会拒绝执行资源。对于script标签来说，就是拒绝执行其中的代码，对于 CSS 来说则是不加载其中的样式。
 
-export default function diff(oldDomTree, newDomTree) {
-  // 用于记录差异
-  let pathchs = {}
-  // 一开始的索引为 0
-  dfs(oldDomTree, newDomTree, 0, pathchs)
-  return pathchs
-}
+理想上来说，这样的方案可以杜绝中间人对资源的篡改。不过和 CSP 一样，它也有自己的局限性：
 
-function dfs(oldNode, newNode, index, patches) {
-  // 用于保存子树的更改
-  let curPatches = []
-  // 需要判断三种情况
-  // 1.没有新的节点，那么什么都不用做
-  // 2.新的节点的 tagName 和 `key` 和旧的不同，就替换
-  // 3.新的节点的 tagName 和 key（可能都没有） 和旧的相同，开始遍历子树
-  if (!newNode) {
-  } else if (newNode.tag === oldNode.tag && newNode.key === oldNode.key) {
-    // 判断属性是否变更
-    let props = diffProps(oldNode.props, newNode.props)
-    if (props.length) curPatches.push({ type: StateEnums.ChangeProps, props })
-    // 遍历子树
-    diffChildren(oldNode.children, newNode.children, index, patches)
-  } else {
-    // 节点不同，需要替换
-    curPatches.push({ type: StateEnums.Replace, node: newNode })
-  }
+1. 和 CSP 一样，当我们用在 HTTP 页面中时，中间人可以直接移除 SRI 的相关属性，这样就完全失效了。
+2. 动态创建的脚本时，除非单独在前端计算信息摘要，否则无法使用 SRI 。
+3. 如果中途因为某种原因修改了脚本内容而忘记了更新摘要值，那么会直接影响可用性。有些自作聪明的代理或资源托管服务器，会对 JavaScript 进行压缩或者混淆，而这个过程对开发者透明，这样也会导致可用性受到影响。
+4. 兼容性比较有限。 iOS Safari 的支持至少需要 iOS 11，在目前看来不是很理想。
 
-  if (curPatches.length) {
-    if (patches[index]) {
-      patches[index] = patches[index].concat(curPatches)
-    } else {
-      patches[index] = curPatches
-    }
-  }
-}
-```
+### HTTPS 的劫持与防治
 
-### 判断属性的更改
+#### SSL strip
 
-判断属性的更改也分三个步骤
+在 HTTPS 协议建立之前，浏览器可能并不知道网站是基于 HTTPS 的，因此首先会去使用 HTTP 协议来访问网站，然后再经由网站的跳转改为 HTTPS 协议。
 
-1. 遍历旧的属性列表，查看每个属性是否还存在于新的属性列表中
-2. 遍历新的属性列表，判断两个列表中都存在的属性的值是否有变化
-3. 在第二步中同时查看是否有属性不存在与旧的属性列列表中
+中间人在这个过程中，实际上可以屏蔽掉这个跳转响应，自己和网站服务器建立 HTTPS 连接，而继续和被劫持的浏览器之间使用 HTTP 协议。如此一来，流量劫持就会退回到 HTTP 协议时的难度。
 
-```js
-function diffProps(oldProps, newProps) {
-  // 判断 Props 分以下三步骤
-  // 先遍历 oldProps 查看是否存在删除的属性
-  // 然后遍历 newProps 查看是否有属性值被修改
-  // 最后查看是否有属性新增
-  let change = []
-  for (const key in oldProps) {
-    if (oldProps.hasOwnProperty(key) && !newProps[key]) {
-      change.push({
-        prop: key
-      })
-    }
-  }
-  for (const key in newProps) {
-    if (newProps.hasOwnProperty(key)) {
-      const prop = newProps[key]
-      if (oldProps[key] && oldProps[key] !== newProps[key]) {
-        change.push({
-          prop: key,
-          value: newProps[key]
-        })
-      } else if (!oldProps[key]) {
-        change.push({
-          prop: key,
-          value: newProps[key]
-        })
-      }
-    }
-  }
-  return change
-}
+为防止这样的情况发生，IETF 推出了一项提案——HSTS（HTTP Strict-Transport-Security）
 
-```
+HSTS的做法是，在HTTPS响应报文的头部中，增加一个名为Strict-Transport-Security的头，内容是这个头的有效期。当浏览器在 HTTPS 响应中看到它时，下一次浏览器会直接使用 HTTPS 来进行请求。
 
-### 判断列表差异算法实现
+#### FREAK 攻击
 
-这个算法是整个 Virtual Dom 中最核心的算法，且让我一一为你道来。
-这里的主要步骤其实和判断属性差异是类似的，也是分为三步
+FREAK 的原理在于， SSL 曾经支持过一种不安全的加密方式，而某些漏洞可以巧妙地触发这种不安全加密。中间人能够在密钥协商中截获 RSA 加密的公钥，并通过暴力破解来逆推出私钥。
 
-1. 遍历旧的节点列表，查看每个节点是否还存在于新的节点列表中
-2. 遍历新的节点列表，判断是否有新的节点
-3. 在第二步中同时判断节点是否有移动
+一旦私钥被得出，该证书也就不再安全，后续的所有会话都会处于危险之中。
 
-PS：该算法只对有 `key` 的节点做处理
+#### HTTPS 流量劫持
+针对 SSL/TLS 攻击的尝试其实从未停止过，未来也不会就此罢休。除了上面列出的两种经典攻击之外，还有很多相似的案例。在防御 HTTPS 流量劫持上，除了使用 HTTPS 之外，更关键的是挑选一个相对安全的加密套件。
 
-```js
-function listDiff(oldList, newList, index, patches) {
-  // 为了遍历方便，先取出两个 list 的所有 keys
-  let oldKeys = getKeys(oldList)
-  let newKeys = getKeys(newList)
-  let changes = []
+### CDN 与流量劫持
 
-  // 用于保存变更后的节点数据
-  // 使用该数组保存有以下好处
-  // 1.可以正确获得被删除节点索引
-  // 2.交换节点位置只需要操作一遍 DOM
-  // 3.用于 `diffChildren` 函数中的判断，只需要遍历
-  // 两个树中都存在的节点，而对于新增或者删除的节点来说，完全没必要
-  // 再去判断一遍
-  let list = []
-  oldList &&
-    oldList.forEach(item => {
-      let key = item.key
-      if (isString(item)) {
-        key = item
-      }
-      // 寻找新的 children 中是否含有当前节点
-      // 没有的话需要删除
-      let index = newKeys.indexOf(key)
-      if (index === -1) {
-        list.push(null)
-      } else list.push(key)
-    })
-  // 遍历变更后的数组
-  let length = list.length
-  // 因为删除数组元素是会更改索引的
-  // 所有从后往前删可以保证索引不变
-  for (let i = length - 1; i >= 0; i--) {
-    // 判断当前元素是否为空，为空表示需要删除
-    if (!list[i]) {
-      list.splice(i, 1)
-      changes.push({
-        type: StateEnums.Remove,
-        index: i
-      })
-    }
-  }
-  // 遍历新的 list，判断是否有节点新增或移动
-  // 同时也对 `list` 做节点新增和移动节点的操作
-  newList &&
-    newList.forEach((item, i) => {
-      let key = item.key
-      if (isString(item)) {
-        key = item
-      }
-      // 寻找旧的 children 中是否含有当前节点
-      let index = list.indexOf(key)
-      // 没找到代表新节点，需要插入
-      if (index === -1 || key == null) {
-        changes.push({
-          type: StateEnums.Insert,
-          node: item,
-          index: i
-        })
-        list.splice(i, 0, key)
-      } else {
-        // 找到了，需要判断是否需要移动
-        if (index !== i) {
-          changes.push({
-            type: StateEnums.Move,
-            from: index,
-            to: i
-          })
-          move(list, index, i)
-        }
-      }
-    })
-  return { changes, list }
-}
+实际上 CDN 不仅能够起到就近服务的功能，同时也能够作为缓存，缓解我们自己网站服务器的压力——因为流量不来我们服务器了。但这也就引入了一个问题，那就是 CDN 上的资源何时更新的问题。现在的通行方案是， CDN 上只部署静态资源，将文档请求（HTML）仍然交给我们自己的服务器。
 
-function getKeys(list) {
-  let keys = []
-  let text
-  list &&
-    list.forEach(item => {
-      let key
-      if (isString(item)) {
-        key = [item]
-      } else if (item instanceof Element) {
-        key = item.key
-      }
-      keys.push(key)
-    })
-  return keys
-}
-```
+出现劫持一般有两种原因：一是 CDN 和用户之间，走的是 HTTP 协议，这种情况比较多见，解决起来比较容易，就是换成 HTTPS 协议；另一个是我们的服务器和 CDN 之间，以及 CDN 内部，是 HTTP 协议的，这样就比较头疼了。
 
-### 遍历子元素打标识
+另外，我们也曾遇到过不止一次 CDN 本身有故障的情况，如 CDN 的 HTTPS 证书过期、CDN 的 gzip 故障等。
 
-对于这个函数来说，主要功能就两个
+#### 基于代码校验的防治方案
 
-1. 判断两个列表差异
-2. 给节点打上标记
+1. 我们监控的级别是业务级甚至页面级，而不是某个固定的资源
+2. 在业务方的 Node.js 中内置逻辑，给予了业务方自己进行降级和响应的能力
+3. 我们把核心的判断逻辑放在自己的服务中，可以通过集中分析来降低误判和警报风暴的可能，并且可以横向根据各接入方的情况，做进一步的推断
+4. 我们自己维护的核心服务如果出现故障，不影响业务方的代码执行——既不影响浏览器中的逻辑也不影响业务方的 Node.js 逻辑
 
-总体来说，该函数实现的功能很简单
-
-```js
-function diffChildren(oldChild, newChild, index, patches) {
-  let { changes, list } = listDiff(oldChild, newChild, index, patches)
-  if (changes.length) {
-    if (patches[index]) {
-      patches[index] = patches[index].concat(changes)
-    } else {
-      patches[index] = changes
-    }
-  }
-  // 记录上一个遍历过的节点
-  let last = null
-  oldChild &&
-    oldChild.forEach((item, i) => {
-      let child = item && item.children
-      if (child) {
-        index =
-          last && last.children ? index + last.children.length + 1 : index + 1
-        let keyIndex = list.indexOf(item.key)
-        let node = newChild[keyIndex]
-        // 只遍历新旧中都存在的节点，其他新增或者删除的没必要遍历
-        if (node) {
-          dfs(item, node, index, patches)
-        }
-      } else index += 1
-      last = item
-    })
-}
-```
-
-### 渲染差异
-
-通过之前的算法，我们已经可以得出两个树的差异了。既然知道了差异，就需要局部去更新 DOM 了，下面就让我们来看看 Virtual Dom 算法的最后一步骤
-
-这个函数主要两个功能
-
-1. 深度遍历树，将需要做变更操作的取出来
-2. 局部更新 DOM
-
-整体来说这部分代码还是很好理解的
-
-```js
-let index = 0
-export default function patch(node, patchs) {
-  let changes = patchs[index]
-  let childNodes = node && node.childNodes
-  // 这里的深度遍历和 diff 中是一样的
-  if (!childNodes) index += 1
-  if (changes && changes.length && patchs[index]) {
-    changeDom(node, changes)
-  }
-  let last = null
-  if (childNodes && childNodes.length) {
-    childNodes.forEach((item, i) => {
-      index =
-        last && last.children ? index + last.children.length + 1 : index + 1
-      patch(item, patchs)
-      last = item
-    })
-  }
-}
-
-function changeDom(node, changes, noChild) {
-  changes &&
-    changes.forEach(change => {
-      let { type } = change
-      switch (type) {
-        case StateEnums.ChangeProps:
-          let { props } = change
-          props.forEach(item => {
-            if (item.value) {
-              node.setAttribute(item.prop, item.value)
-            } else {
-              node.removeAttribute(item.prop)
-            }
-          })
-          break
-        case StateEnums.Remove:
-          node.childNodes[change.index].remove()
-          break
-        case StateEnums.Insert:
-          let dom
-          if (isString(change.node)) {
-            dom = document.createTextNode(change.node)
-          } else if (change.node instanceof Element) {
-            dom = change.node.create()
-          }
-          node.insertBefore(dom, node.childNodes[change.index])
-          break
-        case StateEnums.Replace:
-          node.parentNode.replaceChild(change.node.create(), node)
-          break
-        case StateEnums.Move:
-          let fromNode = node.childNodes[change.from]
-          let toNode = node.childNodes[change.to]
-          let cloneFromNode = fromNode.cloneNode(true)
-          let cloenToNode = toNode.cloneNode(true)
-          node.replaceChild(cloneFromNode, toNode)
-          node.replaceChild(cloenToNode, fromNode)
-          break
-        default:
-          break
-      }
-    })
-}
-```
-
-## 最后
-
-Virtual Dom 算法的实现也就是以下三步
-
-1. 通过 JS 来模拟创建 DOM 对象
-2. 判断两个对象的差异
-3. 渲染差异
-
-```js
-let test4 = new Element('div', { class: 'my-div' }, ['test4'])
-let test5 = new Element('ul', { class: 'my-div' }, ['test5'])
-
-let test1 = new Element('div', { class: 'my-div' }, [test4])
-
-let test2 = new Element('div', { id: '11' }, [test5, test4])
-
-let root = test1.render()
-
-let pathchs = diff(test1, test2)
-console.log(pathchs)
-
-setTimeout(() => {
-  console.log('开始更新')
-  patch(root, pathchs)
-  console.log('结束更新')
-}, 1000)
-```
-
-当然目前的实现还略显粗糙，但是对于理解 Virtual Dom 算法来说已经是完全足够的了。
+<!-- 参考链s接https://zhuanlan.zhihu.com/p/40682772 -->

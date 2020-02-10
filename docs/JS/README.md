@@ -1,6 +1,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-- [内置类型](#%E5%86%85%E7%BD%AE%E7%B1%BB%E5%9E%8B)
+<!-- - [内置类型](#%E5%86%85%E7%BD%AE%E7%B1%BB%E5%9E%8B)
 - [Typeof](#typeof)
 - [类型转换](#%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2)
   - [转Boolean](#%E8%BD%ACboolean)
@@ -37,46 +37,38 @@
   - [字符简写](#%E5%AD%97%E7%AC%A6%E7%AE%80%E5%86%99)
 - [V8 下的垃圾回收机制](#v8-%E4%B8%8B%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6)
   - [新生代算法](#%E6%96%B0%E7%94%9F%E4%BB%A3%E7%AE%97%E6%B3%95)
-  - [老生代算法](#%E8%80%81%E7%94%9F%E4%BB%A3%E7%AE%97%E6%B3%95)
+  - [老生代算法](#%E8%80%81%E7%94%9F%E4%BB%A3%E7%AE%97%E6%B3%95) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+## ES2020
+  可以使用 # 号来表示私有类变量。这样就不必用闭包来隐藏我们不想暴露给外界的私有变量。为了解决对象中 null 和 undefined 值的问题，提供了可选链运算符来访问属性，而无需检查每个级别可能是 null 还是 undefined。使用无效的合并运算符，我们只能为变量为 null 或 undefined 的情况设置默认值。使用 BigInt 对象，可以用 JavaScript 表示超出常规数字安全范围的大数字，并对其执行标准操作，只是小数部分将从结果中省略。
 
-# 内置类型
+### 类的私有字段
+  将使用 # 符号表示类的私有变量。这样就不需要使用闭包来隐藏不想暴露给外界的私有变量。
 
-JS 中分为七种内置类型，七种内置类型又分为两大类型：基本类型和对象（Object）。
+### 可选链运算符
+  使用可选链运算符，只需要使用 ?. 来访问嵌套对象。而且如果碰到的是 undefined 或 null 属性，那么它只会返回 undefined，不会使程序崩溃，尚未在任何浏览器中实现，所以最新版本的 Babel 来使用此功能。
 
-基本类型有六种： `null`，`undefined`，`boolean`，`number`，`string`，`symbol`。
+### 空位合并运算符
+  来自 undefined 或 null 值的另一个问题是，如果我们想要的变量为 undefined 或 null 则必须给变量设置默认值
 
-其中 JS 的数字类型是浮点类型的，没有整型。并且浮点类型基于 IEEE 754标准实现，在使用中会遇到某些 [Bug](#%E4%B8%BA%E4%BB%80%E4%B9%88-01--02--03)。`NaN` 也属于 `number` 类型，并且 `NaN` 不等于自身。
+  为了解决这个问题，有人提议创建一个“nullish”合并运算符，用 ?? 表示。有了它，我们仅在第一项为 null 或 undefined 时设置默认值
 
-对于基本类型来说，如果使用字面量的方式，那么这个变量只是个字面量，只有在必要的时候才会转换为对应的类型
+### BigInt
 
-```js
-let a = 111 // 这只是字面量，不是 number 类型
-a.toString() // 使用时候才会转换为对象类型
-```
+## 数据类型
 
-对象（Object）是引用类型，在使用过程中会遇到浅拷贝和深拷贝的问题。
+JS 中分为七种数据类型，七种内置类型又分为两大类型：基本类型和对象（Object）。
 
-```js
-let a = { name: 'FE' }
-let b = a
-b.name = 'EF'
-console.log(a.name) // EF
-```
+基本类型有六种： `null`，`undefined`，`boolean`，`number`，`string`，`symbol`。 存储在栈内存中
 
-# Typeof
+其中 JS 的数字类型是浮点类型的，没有整型。并且浮点类型基于 IEEE 754标准实现，在使用中会遇到某些 [Bug](#%E4%B8%BA%E4%BB%80%E4%B9%88-01--02--03)。`NaN` 也属于 `number` 类型，并且 `NaN` 不等于自身。 NaN == NaN => false
+
+对象存储在堆内存中
+
+### Typeof
 
 `typeof` 对于基本类型，除了 `null` 都可以显示正确的类型
-
-```js
-typeof 1 // 'number'
-typeof '1' // 'string'
-typeof undefined // 'undefined'
-typeof true // 'boolean'
-typeof Symbol() // 'symbol'
-typeof b // b 没有声明，但是还会显示 undefined
-```
 
 `typeof` 对于对象，除了函数都会显示 `object`
 
@@ -92,9 +84,11 @@ typeof console.log // 'function'
 typeof null // 'object'
 ```
 
-PS：为什么会出现这种情况呢？因为在 JS 的最初版本中，使用的是 32 位系统，为了性能考虑使用低位存储了变量的类型信息，`000` 开头代表是对象，然而 `null` 表示为全零，所以将它错误的判断为 `object` 。虽然现在的内部类型判断代码已经改变了，但是对于这个 Bug 却是一直流传下来。
+因为在 JS 的最初版本中，使用的是 32 位系统，为了性能考虑使用低位存储了变量的类型信息，`000` 开头代表是对象，然而 `null` 表示为全零，所以将它错误的判断为 `object` 。虽然现在的内部类型判断代码已经改变了，但是对于这个 Bug 却是一直流传下来。
 
-如果我们想获得一个变量的正确类型，可以通过 `Object.prototype.toString.call(xx)`。这样我们就可以获得类似 `[object Type]` 的字符串。
+- 正确判断数据类型
+
+想获得一个变量的正确类型，可以通过 `Object.prototype.toString.call(xx)`。可以获得 `[object Type]` 的字符串。
 
 ```js
 let a
@@ -109,13 +103,13 @@ let undefined = 1
 a === void 0
 ```
 
-# 类型转换
+## 类型转换
 
-## 转Boolean
+#### 转Boolean
 
 在条件判断时，除了 `undefined`， `null`， `false`， `NaN`， `''`， `0`， `-0`，其他所有值都转为 `true`，包括所有对象。
 
-## 对象转基本类型
+#### 对象转基本类型
 
 对象在转换基本类型时，首先会调用 `valueOf` 然后调用 `toString`。并且这两个方法你是可以重写的。
 
@@ -127,7 +121,7 @@ let a = {
 }
 ```
 
-当然你也可以重写 `Symbol.toPrimitive` ，该方法在转基本类型时调用优先级最高。
+当然也可以重写 `Symbol.toPrimitive` ，该方法在转基本类型时调用优先级最高。
 
 ```js
 let a = {
@@ -145,7 +139,7 @@ let a = {
 '1' + a // => '12'
 ```
 
-## 四则运算符
+#### 四则运算符
 
 只有当加法运算时，其中一方是字符串类型，就会把另一个也转为字符串类型。其他运算只要其中一方是数字，那么另一方就转为数字。并且加法运算会触发三种类型转换：将值转换为原始值，转换为数字，转换为字符串。
 
@@ -166,7 +160,7 @@ let a = {
 // 你也许在一些代码中看到过 + '1' -> 1
 ```
 
-## `==` 操作符
+#### `==` 操作符
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042612.png)
 
@@ -188,12 +182,12 @@ ToPrimitive([]) == 0
 0 == 0 // -> true
 ```
 
-## 比较运算符
+#### 比较运算符
 
 1. 如果是对象，就通过 `toPrimitive` 转换对象
 2. 如果是字符串，就通过 `unicode` 字符索引来比较
 
-# 原型
+## 原型
 
 ![prototype](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042625.png)
 
@@ -203,16 +197,16 @@ ToPrimitive([]) == 0
 
 对象可以通过 `__proto__` 来寻找不属于该对象的属性，`__proto__` 将对象连接起来组成了原型链。
 
-如果你想更进一步的了解原型，可以仔细阅读 [深度解析原型中的各个难点](https://github.com/KieSun/Blog/issues/2)。
+<!-- 如果你想更进一步的了解原型，可以仔细阅读 [深度解析原型中的各个难点](https://github.com/KieSun/Blog/issues/2)。 -->
 
-# new
+## new
 
 1. 新生成了一个对象
 2. 链接到原型
 3. 绑定 this
 4. 返回新对象
 
-在调用 `new` 的过程中会发生以上四件事情，我们也可以试着来自己实现一个 `new`
+<!-- 在调用 `new` 的过程中会发生以上四件事情，我们也可以试着来自己实现一个 `new` -->
 
 ```js
 function create() {
@@ -257,7 +251,7 @@ new Foo.getName();   // -> 1
 new Foo().getName(); // -> 2       
 ```
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042626.png)
+<!-- ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042626.png) -->
 
 从上图可以看出，`new Foo() ` 的优先级大于 `new Foo` ，所以对于上述代码来说可以这样划分执行顺序
 
@@ -268,11 +262,10 @@ new (Foo.getName());
 
 对于第一个函数来说，先执行了 `Foo.getName()` ，所以结果为 1；对于后者来说，先执行 `new Foo()` 产生了一个实例，然后通过原型链找到了 `Foo` 上的 `getName` 函数，所以结果为 2。
 
-# instanceof
+## instanceof
 
 `instanceof` 可以正确的判断对象的类型，因为内部机制是通过判断对象的原型链中是不是能找到类型的 `prototype`。
 
-我们也可以试着实现一下 `instanceof`
 
 ```js
 function instanceof(left, right) {
@@ -291,9 +284,7 @@ function instanceof(left, right) {
 }
 ```
 
-# this
-
-`this` 是很多人会混淆的概念，但是其实他一点都不难，你只需要记住几个规则就可以了。
+## this
 
 ```js
 function foo() {
@@ -318,7 +309,7 @@ console.log(c.a)
 // 还有种就是利用 call，apply，bind 改变 this，这个优先级仅次于 new
 ```
 
-以上几种情况明白了，很多代码中的 `this` 应该就没什么问题了，下面让我们看看箭头函数中的 `this`
+箭头函数中的 `this`
 
 ```js
 function a() {
@@ -333,7 +324,7 @@ console.log(a()()())
 
 箭头函数其实是没有 `this` 的，这个函数中的 `this` 只取决于他外面的第一个不是箭头函数的函数的 `this`。在这个例子中，因为调用 `a` 符合前面代码中的第一个情况，所以 `this` 是 `window`。并且 `this` 一旦绑定了上下文，就不会被任何代码改变。
 
-# 执行上下文
+## 执行上下文
 当执行 JS 代码时，会产生三种执行上下文
 
 - 全局执行上下文
@@ -401,7 +392,7 @@ fooContext.Scope = [
 ]
 ```
 
-接下来让我们看一个老生常谈的例子，`var`
+老生常谈的例子，`var`,变量提升问题
 
 ```js
 b() // call b
@@ -413,8 +404,7 @@ function b() {
 	console.log('call b')
 }
 ```
-
-想必以上的输出大家肯定都已经明白了，这是因为函数和变量提升的原因。通常提升的解释是说将声明的代码移动到了顶部，这其实没有什么错误，便于大家理解。但是更准确的解释应该是：在生成执行上下文时，会有两个阶段。第一个阶段是创建的阶段（具体步骤是创建 VO），JS 解释器会找出需要提升的变量和函数，并且给他们提前在内存中开辟好空间，函数的话会将整个函数存入内存中，变量只声明并且赋值为 undefined，所以在第二个阶段，也就是代码执行阶段，我们可以直接提前使用。
+这是因为函数和变量提升的原因。通常提升的解释是说将声明的代码移动到了顶部，这其实没有什么错误，便于大家理解。但是更准确的解释应该是：在生成执行上下文时，会有两个阶段。第一个阶段是创建的阶段（具体步骤是创建 VO），JS 解释器会找出需要提升的变量和函数，并且给他们提前在内存中开辟好空间，函数的话会将整个函数存入内存中，变量只声明并且赋值为 undefined，所以在第二个阶段，也就是代码执行阶段，我们可以直接提前使用。
 
 在提升的过程中，相同的函数会覆盖上一个函数，并且函数优先于变量提升
 
@@ -456,9 +446,9 @@ specialObject.foo = foo; // {DontDelete}, {ReadOnly}
 delete Scope[0]; // remove specialObject from the front of scope chain
  ```
 
-# 闭包
+## 闭包
 
-闭包的定义很简单：函数 A 返回了一个函数 B，并且函数 B 中使用了函数 A 的变量，函数 B 就被称为闭包。
+闭包的定义：函数 A 返回了一个函数 B，并且函数 B 中使用了函数 A 的变量，函数 B 就被称为闭包。
 
 ```js
 function A() {
@@ -470,9 +460,9 @@ function A() {
 }
 ```
 
-你是否会疑惑，为什么函数 A 已经弹出调用栈了，为什么函数 B 还能引用到函数 A 中的变量。因为函数 A 中的变量这时候是存储在堆上的。现在的 JS 引擎可以通过逃逸分析辨别出哪些变量需要存储在堆上，哪些需要存储在栈上。
+疑惑，为什么函数 A 已经弹出调用栈了，为什么函数 B 还能引用到函数 A 中的变量。因为函数 A 中的变量这时候是存储在堆上的。现在的 JS 引擎可以通过逃逸分析辨别出哪些变量需要存储在堆上，哪些需要存储在栈上。
 
-经典面试题，循环中使用闭包解决 `var` 定义函数的问题
+例子：循环中使用闭包解决 `var` 定义函数的问题
 
 ```Js
 for ( var i=1; i<=5; i++) {
@@ -482,9 +472,9 @@ for ( var i=1; i<=5; i++) {
 }
 ```
 
-首先因为 `setTimeout` 是个异步函数，所有会先把循环全部执行完毕，这时候 `i` 就是 6 了，所以会输出一堆 6。
+首先因为 `setTimeout` 是个异步函数，所有会先把循环全部执行完毕，所以会输出一堆 6。
 
-解决办法两种，第一种使用闭包
+解决办法三种，第一种使用闭包
 
 ```js
 for (var i = 1; i <= 5; i++) {
@@ -539,24 +529,10 @@ for ( let i=1; i<=5; i++) {
 }
 ```
 
-# 深浅拷贝
-
-```js
-let a = {
-    age: 1
-}
-let b = a
-a.age = 2
-console.log(b.age) // 2
-```
-
-从上述例子中我们可以发现，如果给一个变量赋值一个对象，那么两者的值会是同一个引用，其中一方改变，另一方也会相应改变。
-
-通常在开发中我们不希望出现这样的问题，我们可以使用浅拷贝来解决这个问题。
 
 ## 浅拷贝
 
-首先可以通过 `Object.assign` 来解决这个问题。
+可以通过 `Object.assign` 展开运算符（…）来解决
 
 ```js
 let a = {
@@ -567,8 +543,6 @@ a.age = 2
 console.log(b.age) // 1
 ```
 
-当然我们也可以通过展开运算符（…）来解决
-
 ```js
 let a = {
     age: 1
@@ -577,8 +551,6 @@ let b = {...a}
 a.age = 2
 console.log(b.age) // 1
 ```
-
-通常浅拷贝就能解决大部分问题了，但是当我们遇到如下情况就需要使用到深拷贝了
 
 ```js
 let a = {
@@ -596,7 +568,7 @@ console.log(b.jobs.first) // native
 
 ## 深拷贝
 
-这个问题通常可以通过 `JSON.parse(JSON.stringify(object))` 来解决。
+通常可以通过 `JSON.parse(JSON.stringify(object))` 来解决。
 
 ```js
 let a = {
@@ -610,7 +582,7 @@ a.jobs.first = 'native'
 console.log(b.jobs.first) // FE
 ```
 
-但是该方法也是有局限性的：
+但是该方法有局限性的：
 
 - 会忽略 `undefined`
 - 会忽略 `symbol`
@@ -634,9 +606,9 @@ let newObj = JSON.parse(JSON.stringify(obj))
 console.log(newObj)
 ```
 
-如果你有这么一个循环引用对象，你会发现你不能通过该方法深拷贝
+如果有这么一个循环引用对象，你会发现你不能通过该方法深拷贝
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042627.png)
+<!-- ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042627.png) -->
 
 在遇到函数、 `undefined` 或者 `symbol` 的时候，该对象也不能正常的序列化
 
@@ -645,10 +617,10 @@ let a = {
     age: undefined,
     sex: Symbol('male'),
     jobs: function() {},
-    name: 'yck'
+    name: 'sunkb'
 }
 let b = JSON.parse(JSON.stringify(a))
-console.log(b) // {name: "yck"}
+console.log(b) // {name: "sunkb"}
 ```
 
 你会发现在上述情况中，该方法会忽略掉函数和 `undefined` 。
@@ -676,7 +648,7 @@ var obj = {a: 1, b: {
 })()
 ```
 
-# 模块化
+## 模块化
 
 在有 Babel 的情况下，我们可以直接使用 ES6 的模块化
 
@@ -691,7 +663,7 @@ import {a, b} from './a.js'
 import XXX from './b.js'
 ```
 
-## CommonJS
+### CommonJS
 
 `CommonJs` 是 Node 独有的规范，浏览器中使用就需要用到 `Browserify` 解析了。
 
@@ -742,7 +714,7 @@ var load = function (module) {
 - 前者在导出时都是值拷贝，就算导出的值变了，导入的值也不会改变，所以如果想更新值，必须重新导入一次。但是后者采用实时绑定的方式，导入导出的值都指向同一个内存地址，所以导入值会跟随导出值变化
 - 后者会编译成 `require/exports` 来执行的
 
-## AMD
+### AMD
 
 AMD 是由 `RequireJS` 提出的
 
@@ -760,15 +732,17 @@ define(function(require, exports, module) {
 })
 
 ```
-# 防抖
+## 防抖
 
-你是否在日常开发中遇到一个问题，在滚动事件中需要做个复杂计算或者实现一个按钮的防二次点击操作。
+在日常开发中遇到一个问题，在滚动事件中需要做个复杂计算或者实现一个按钮的防二次点击操作。
 
 这些需求都可以通过函数防抖动来实现。尤其是第一个需求，如果在频繁的事件回调中做复杂计算，很有可能导致页面卡顿，不如将多次计算合并为一次计算，只在一个精确点做操作。
 
 PS：防抖和节流的作用都是防止函数多次调用。区别在于，假设一个用户一直触发这个函数，且每次触发函数的间隔小于wait，防抖的情况下只会调用一次，而节流的 情况会每隔一定时间（参数wait）调用函数。
 
-我们先来看一个袖珍版的防抖理解一下防抖的实现：
+![](https://mmbiz.qpic.cn/mmbiz_jpg/PCVXRicicmuMzFz6FeafF2P5FPdEP9lj78picwY5prY64H0MPliav6vzlbkStsysSobGEq5cqc0hI2Eq6AyuUXiaOGw/640?tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+
+看一个袖珍版的防抖理解一下防抖的实现：
 
 ```js
 // func是用户传入需要防抖的函数
@@ -851,9 +825,11 @@ function debounce (func, wait = 50, immediate = true) {
 - 对于按钮防点击来说的实现：如果函数是立即执行的，就立即调用，如果函数是延迟执行的，就缓存上下文和参数，放到延迟函数中去执行。一旦我开始一个定时器，只要我定时器还在，你每次点击我都重新计时。一旦你点累了，定时器时间到，定时器重置为 `null`，就可以再次点击了。
 - 对于延时执行函数来说的实现：清除定时器ID，如果是延迟调用就调用函数
 
-# 节流
+## 节流
 
 防抖动和节流本质是不一样的。防抖动是将多次执行变为最后一次执行，节流是将多次执行变成每隔一段时间执行。
+
+![](https://mmbiz.qpic.cn/mmbiz_jpg/PCVXRicicmuMzFz6FeafF2P5FPdEP9lj78Tibia9ASHX8OA6wpGTo7Hibgh0KiaH1epBia2R0wqphiaMrybohGwyjS2S1A/640)
 
 ```js
 /**
@@ -923,7 +899,7 @@ _.throttle = function(func, wait, options) {
   };
 ```
 
-# 继承
+## 继承
 
 在 ES5 中，我们可以使用如下方式解决继承的问题
 
@@ -961,7 +937,7 @@ myDate.test()
 
 但是 ES6 不是所有浏览器都兼容，所以我们需要使用 Babel 来编译这段代码。
 
-如果你使用编译过得代码调用 `myDate.test()` 你会惊奇地发现出现了报错
+如果你使用编译过得代码调用 `myDate.test()` 惊奇地发现出现了报错
 
 ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042628.png)
 
@@ -985,9 +961,9 @@ Object.setPrototypeOf(MyData.prototype, Date.prototype)
 
 通过以上方法实现的继承就可以完美解决 JS 底层的这个限制。
 
-# call, apply, bind 区别
+## call, apply, bind 区别
 
-首先说下前两者的区别。
+两者的区别。
 
 `call` 和 `apply` 都是为了解决改变 `this` 的指向。作用都是相同的，只是传参的方式不同。
 
@@ -1002,11 +978,11 @@ function getValue(name, age) {
     console.log(age)
     console.log(this.value)
 }
-getValue.call(a, 'yck', '24')
-getValue.apply(a, ['yck', '24'])
+getValue.call(a, 'sunkb', '27')
+getValue.apply(a, ['sunkb', '27'])
 ```
 
-## 模拟实现 call 和 apply
+### 模拟实现 call 和 apply
 
 可以从以下几点来考虑如何实现
 
@@ -1017,11 +993,11 @@ getValue.apply(a, ['yck', '24'])
 Function.prototype.myCall = function (context) {
   var context = context || window
   // 给 context 添加一个属性
-  // getValue.call(a, 'yck', '24') => a.fn = getValue
+  // getValue.call(a, 'sunkb', '27') => a.fn = getValue
   context.fn = this
   // 将 context 后面的参数取出来
   var args = [...arguments].slice(1)
-  // getValue.call(a, 'yck', '24') => a.fn('yck', '24')
+  // getValue.call(a, 'sunkb', '27') => a.fn('sunkb', '27')
   var result = context.fn(...args)
   // 删除 fn
   delete context.fn
@@ -1052,7 +1028,7 @@ Function.prototype.myApply = function (context) {
 
 `bind` 和其他两个方法作用也是一致的，只是该方法会返回一个函数。并且我们可以通过 `bind` 实现柯里化。
 
-同样的，也来模拟实现下 `bind`
+同样的，bind也来模拟实现下 `bind`
 
 ```js
 Function.prototype.myBind = function (context) {
@@ -1072,9 +1048,11 @@ Function.prototype.myBind = function (context) {
 }
 ```
 
-# Promise 实现
+## Promise 实现
 
-Promise 是 ES6 新增的语法，解决了回调地狱的问题。
+Promise 是 ES6 新增的语法，解决了回调地狱的问题,链式调用,构建函数内函数立即执行。
+
+缺点：无法取消 Promise，错误需要通过回调函数捕获
 
 可以把 Promise 看成一个状态机。初始是 `pending` 状态，可以通过函数 `resolve` 和 `reject` ，将状态转变为 `resolved` 或者 `rejected` 状态，状态一旦改变就不能再次变化。
 
@@ -1253,11 +1231,11 @@ function resolutionProcedure(promise2, x, resolve, reject) {
   }
 }
 ```
-以上就是根据 Promise / A+ 规范来实现的代码，可以通过 `promises-aplus-tests` 的完整测试
+<!-- 以上就是根据 Promise / A+ 规范来实现的代码，可以通过 `promises-aplus-tests` 的完整测试 -->
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042629.png)
+<!-- ![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042629.png) -->
 
-# Generator 实现
+## Generator 实现
 
 Generator 是 ES6 中新增的语法，和 Promise 一样，都可以用来异步编程
 
@@ -1299,7 +1277,7 @@ function generator(cb) {
     };
   })();
 }
-// 如果你使用 babel 编译后可以发现 test 函数变成了这样
+// 使用 babel 编译后可以发现 test 函数变成了这样
 function test() {
   var a;
   return generator(function(_context) {
@@ -1325,7 +1303,7 @@ function test() {
 }
 ```
 
-# Map、FlatMap 和 Reduce
+## Map、FlatMap 和 Reduce
 
 `Map` 作用是生成一个新数组，遍历原数组，将每个元素拿出来做一些变换然后 `append` 到新的数组中。
 
@@ -1375,7 +1353,7 @@ function b() {
 // -> 2 1
 ```
 
-# async 和 await
+## async 和 await
 
 一个函数如果加上 `async` ，那么该函数就会返回一个 `Promise`
 
@@ -1410,7 +1388,7 @@ test()
 
 `async 和 await` 相比直接使用 `Promise` 来说，优势在于处理 `then` 的调用链，能够更清晰准确的写出代码。缺点在于滥用 `await` 可能会导致性能问题，因为 `await` 会阻塞代码，也许之后的异步代码并不依赖于前者，但仍然需要等待前者完成，导致代码失去了并发性。
 
-下面来看一个使用 `await` 的代码。
+<!-- 下面来看一个使用 `await` 的代码。
 
 ```js
 var a = 0
@@ -1423,16 +1401,16 @@ var b = async () => {
 b()
 a++
 console.log('1', a) // -> '1' 1
-```
-
+``` -->
+<!-- 
 对于以上代码你可能会有疑惑，这里说明下原理
 
 - 首先函数 `b` 先执行，在执行到 `await 10` 之前变量 `a` 还是 0，因为在 `await` 内部实现了 `generators` ，`generators` 会保留堆栈中东西，所以这时候 `a = 0` 被保存了下来
 - 因为 `await` 是异步操作，遇到`await`就会立即返回一个`pending`状态的`Promise`对象，暂时返回执行代码的控制权，使得函数外的代码得以继续执行，所以会先执行 `console.log('1', a)`
 - 这时候同步代码执行完毕，开始执行异步代码，将保存下来的值拿出来使用，这时候 `a = 10`
-- 然后后面就是常规执行代码了
+- 然后后面就是常规执行代码了 -->
 
-# Proxy
+## Proxy
 
 Proxy 是 ES6 中新增的功能，可以用来自定义对象中的操作
 
@@ -1469,8 +1447,29 @@ let p = onWatch(obj, (v) => {
 p.a = 2 // bind `value` to `2`
 p.a // -> Get 'a' = 2
 ```
+## 柯里化Currying
 
-# 为什么 0.1 + 0.2 != 0.3
+Currying 为实现多参函数提供了一个递归降解的实现思路——把接受多个参数的函数变换成接受一个单一参数（最初函数的第一个参数）的函数，并且返回接受余下的参数而且返回结果的新函数，主要作用是参数复用，延迟执行，提前返回
+
+```js
+function add (x, y) {
+  return (x + y)
+}
+
+function currying (fn, ...args1) {
+    return function (...args2) {
+        return fn(...args1, ...args2)
+    }
+}
+currying(add, 5)(5,2,3) // 10
+
+var increment = currying(add, 1)
+increment(2) === 3  // true
+// true
+
+```
+
+## 为什么 0.1 + 0.2 != 0.3
 
 因为 JS 采用 IEEE 754 双精度版本（64位），并且只要采用 IEEE 754 的语言都有该问题。
 
@@ -1480,9 +1479,9 @@ p.a // -> Get 'a' = 2
 // (0011) 表示循环
 0.1 = 2^-4 * 1.10011(0011)
 ```
-那么如何得到这个二进制的呢，我们可以来演算下
+<!-- 那么如何得到这个二进制的呢，我们可以来演算下
 
-![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042632.png)
+![](https://yck-1254263422.cos.ap-shanghai.myqcloud.com/blog/2019-06-01-042632.png) -->
 
 小数算二进制和整数不同。乘法计算时，只计算小数位，整数位用作每一位的二进制，并且得到的第一位为最高位。所以我们得出 `0.1 = 2^-4 * 1.10011(0011)`，那么 `0.2` 的演算也基本如上所示，只需要去掉第一步乘法，所以得出 `0.2 = 2^-3 * 1.10011(0011)`。
 
@@ -1490,14 +1489,14 @@ p.a // -> Get 'a' = 2
 
 所以 `2^-4 * 1.10011...001` 进位后就变成了 `2^-4 * 1.10011(0011 * 12次)010` 。那么把这两个二进制加起来会得出 `2^-2 * 1.0011(0011 * 11次)0100` , 这个值算成十进制就是 `0.30000000000000004`
 
-下面说一下原生解决办法，如下代码所示
+原生解决办法，如下代码所示
 
 ```js
 parseFloat((0.1 + 0.2).toFixed(10))
 ```
-# 正则表达式
+## 正则表达式
 
-## 元字符
+#### 元字符
 
 | 元字符 |                             作用                             |
 | :----: | :----------------------------------------------------------: |
@@ -1505,14 +1504,14 @@ parseFloat((0.1 + 0.2).toFixed(10))
 |   []   |  匹配方括号内的任意字符。比如 [0-9] 就可以用来匹配任意数字   |
 |   ^    | ^9，这样使用代表匹配以 9 开头。[`^`9]，这样使用代表不匹配方括号内除了 9 的字符 |
 | {1, 2} |                      匹配 1 到 2 位字符                      |
-| (yck)  |                   只匹配和 yck 相同字符串                    |
+| (sun)  |                   只匹配和 sun 相同字符串                    |
 |   \|   |                     匹配 \| 前后任意字符                     |
 |   \    |                             转义                             |
 |   *    |               只匹配出现 0 次及以上 * 前的字符                |
 |   +    |                只匹配出现 1 次及以上 + 前的字符                |
 |   ?    |                        ? 之前字符可选                        |
 
-## 修饰语
+#### 修饰语
 
 | 修饰语 |    作用    |
 | :----: | :--------: |
@@ -1520,7 +1519,7 @@ parseFloat((0.1 + 0.2).toFixed(10))
 |   g    |  全局搜索  |
 |   m    |    多行    |
 
-## 字符简写
+#### 字符简写
 
 | 简写 |         作用         |
 | :--: | :------------------: |
@@ -1533,17 +1532,34 @@ parseFloat((0.1 + 0.2).toFixed(10))
 |  \b  | 匹配单词的开始或结束 |
 |  \B  |      和上面相反      |
 
-# V8 下的垃圾回收机制
+
+## babel处理过程
+babel-core，babel-runtime，babel-loader
+代码在编译阶段解析成抽象语法树（AST），然后经过一系列的遍历和转换，然后再将转换后的抽象语法树生成为常规的js代码
+![](https://user-gold-cdn.xitu.io/2018/12/24/167dfa8949b0401a?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+### 抽象语法树（AST）
+
+## webpack处理过程
+
+webpack 处理应用程序时,它会递归地构建一个依赖关系图(dependency graph),其中包含应用程序需要的每个模块,然后将所有这些模块打包成一个或多个 bundle。
+
+webpack 通过 Tapable 来组织这条复杂的生产线。 webpack 在运行过程中会广播事件,插件只需要监听它所关心的事件,就能加入到这条生产线中,去改变生产线的运作
+
+### plugins实现
+例子：配合htmlWebpackPlugin，给html中link标签加id
+
+## V8 下的垃圾回收机制
 
 V8 实现了准确式 GC，GC 算法采用了分代式垃圾回收机制。因此，V8 将内存（堆）分为新生代和老生代两部分。
 
-## 新生代算法
+### 新生代算法
 
 新生代中的对象一般存活时间较短，使用 Scavenge GC 算法。
 
 在新生代空间中，内存空间分为两部分，分别为 From 空间和 To 空间。在这两个空间中，必定有一个空间是使用的，另一个空间是空闲的。新分配的对象会被放入 From 空间中，当 From 空间被占满时，新生代 GC 就会启动了。算法会检查 From 空间中存活的对象并复制到 To 空间中，如果有失活的对象就会销毁。当复制完成后将 From 空间和 To 空间互换，这样 GC 就结束了。
 
-## 老生代算法
+### 老生代算法
 
 老生代中的对象一般存活时间较长且数量也多，使用了两个算法，分别是标记清除算法和标记压缩算法。
 
@@ -1582,3 +1598,9 @@ enum AllocationSpace {
 在这个阶段中，会遍历堆中所有的对象，然后标记活的对象，在标记完成后，销毁所有没有被标记的对象。在标记大型对内存时，可能需要几百毫秒才能完成一次标记。这就会导致一些性能上的问题。为了解决这个问题，2011 年，V8 从 stop-the-world 标记切换到增量标志。在增量标记期间，GC 将标记工作分解为更小的模块，可以让 JS 应用逻辑在模块间隙执行一会，从而不至于让应用出现停顿情况。但在 2018 年，GC 技术又有了一个重大突破，这项技术名为并发标记。该技术可以让 GC 扫描和标记对象时，同时允许 JS 运行，你可以点击 [该博客](https://v8project.blogspot.com/2018/06/concurrent-marking.html) 详细阅读。
 
 清除对象后会造成堆内存出现碎片的情况，当碎片超过一定限制后会启动压缩算法。在压缩过程中，将活的对象像一端移动，直到所有对象都移动完成然后清理掉不需要的内存。
+
+## canvas原理
+
+## nginx知识
+
+

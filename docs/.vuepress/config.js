@@ -14,11 +14,12 @@ module.exports = {
     ],
     themeConfig: {
       displayAllHeaders: false,// 默认值：false
-      sidebarDepth: 2,
-      logo: 'http://q285gdauq.bkt.clouddn.com/sunligjt.jpg',
+      sidebarDepth: 3,
+      logo: 'http://cdn.sunkb.cn/自拍sun.jpeg',
       // activeHeaderLinks: false,
       nav: [
         { text: 'Home', link: '/' },
+        { text: '我的个人官网', link: 'http://www.sunkb.cn'},
         { text: 'JS基础', link: '/JS/' },
         { text: 'Vue', link: '/Vue/vue' },
         { text: 'React半解', link: '/React/' },

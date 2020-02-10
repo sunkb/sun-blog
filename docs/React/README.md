@@ -1,15 +1,15 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+<!-- **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)* -->
 
-- [React 生命周期分析](#react-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%88%86%E6%9E%90)
+<!-- - [React 生命周期分析](#react-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%88%86%E6%9E%90)
   - [V16 生命周期函数用法建议](#v16-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%87%BD%E6%95%B0%E7%94%A8%E6%B3%95%E5%BB%BA%E8%AE%AE)
 - [setState](#setstate)
-- [Redux 源码分析](#redux-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90)
+- [Redux 源码分析](#redux-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90) -->
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# React 生命周期分析
+## React 生命周期分析
 
 在 V16 版本中引入了 Fiber 机制。这个机制一定程度上的影响了部分生命周期的调用，并且也引入了新的 2 个 API 来解决问题。
 
@@ -99,7 +99,7 @@ class ExampleComponent extends React.Component {
 }
 ```
 
-# setState
+## setState
 
 `setState` 在 React 中是经常使用的一个 API，但是它存在一些问题，可能会导致犯错，核心原因就是因为这个 API 是异步的。
 
@@ -149,7 +149,7 @@ handle() {
 }
 ```
 
-# Redux 源码分析
+## Redux 源码分析
 
 首先让我们来看下 `combineReducers` 函数
 
